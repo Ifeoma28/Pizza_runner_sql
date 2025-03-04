@@ -258,6 +258,14 @@ SELECT *
 FROM ratings;
 ```
 to find a rating, i had to check the order duration for each customer
+```
+SELECT customer_id,MAX(duration)
+FROM customer_orders
+INNER JOIN runner_orders ON
+customer_orders.order_id = runner_orders.order_id
+WHERE duration IS NOT NULL
+GROUP BY customer_id;
+```
   
 - Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
 customer_id
@@ -271,15 +279,7 @@ Delivery duration
 Average speed
 Total number of pizzas
 
-```
--- delivery duration
-SELECT customer_id,MAX(duration)
-FROM customer_orders
-INNER JOIN runner_orders ON
-customer_orders.order_id = runner_orders.order_id
-WHERE duration IS NOT NULL
-GROUP BY customer_id;
-```
+All the above columns are in ;
 ```
 SELECT customer_orders.customer_id,runner_orders.order_id,runner_orders.runner_id,
 ratings.pizza_rating,customer_orders.order_time,runner_orders.pickup_time
@@ -300,7 +300,9 @@ customer_orders.order_id = runner_orders.order_id
 LEFT JOIN ratings ON
 customer_orders.customer_id = ratings.customer_id
 WHERE runner_orders.cancellation = 'none';
---  successful delivery duration
+```
+Successful delivery duration
+```
 SELECT customer_orders.customer_id,runner_orders.order_id,runner_orders.runner_id,
 ratings.pizza_rating,customer_orders.order_time,runner_orders.pickup_time,runner_orders.duration
 FROM customer_orders
@@ -310,7 +312,7 @@ LEFT JOIN ratings ON
 customer_orders.customer_id = ratings.customer_id
 WHERE runner_orders.duration IS NOT NULL;
 ```
- average speed
+Average speed
 ```
 SELECT  customer_orders.customer_id,
 ratings.pizza_rating,AVG(distance/duration) AS average_speed
@@ -342,9 +344,20 @@ FROM
 
 ### Ingredient optimization 
 - What was the commonly added extra ?
-  
+```
+SELECT *
+ FROM customer_orders
+ WHERE extras = 1;
+```
+The commonly added extra is Bacon
 - What was the common exclusions ?
-  
+```
+SELECT COUNT(*) FROM  (SELECT *
+ FROM customer_orders
+ WHERE exclusions <> '') AS exclusions_table
+ WHERE exclusions = 4;
+```
+The common exclusion is Cheese
 - What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 
 ## Findings 
