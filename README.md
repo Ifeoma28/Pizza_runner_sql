@@ -138,20 +138,117 @@ GROUP BY DAYNAME(order_time);
 ```
 ### Runner and Customer experience 
 - How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
+```
+SELECT week_no,runners FROM
+	(SELECT EXTRACT(week FROM registration_date) AS week_no ,
+		COUNT(runner_id) AS runners
+			FROM runners 
+				GROUP BY week_no) AS week_period
+WHERE week_no >= 1 ;
+```
 - What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
+first we had to change the datatype
+```
+SELECT 
+ CAST(pickup_time AS datetime)
+FROM runner_orders
+WHERE pickup_time <> 'null';
+```
+Then the average time is ;
+```
+SELECT runner_orders.runner_id, AVG(minute(timediff(pickup_time,order_time))) AS avg_time_diff_mins
+FROM runner_orders
+INNER JOIN customer_orders ON
+runner_orders.order_id = customer_orders.order_id
+WHERE pickup_time <> 'null'
+GROUP BY runner_id;
+```
 - Is there any relationship between the number of pizzas and how long the order takes to prepare?
-- What was the average distance travelled for each customer?
-- What was the difference between the longest and shortest delivery times for all orders?
-- What was the average speed for each runner for each delivery and do you notice any trend for these values?
-- What is the successful delivery percentage for each runner?
+```
+SELECT pizza_no, AVG(max_prep_time)
+	FROM
+		(SELECT customer_orders.order_id,COUNT(pizza_id) AS pizza_no,MAX(minute(timediff(pickup_time,order_time))) AS max_prep_time
+		FROM customer_orders
+		INNER JOIN runner_orders ON
+		customer_orders.order_id = runner_orders.order_id
+        WHERE cancellation = 'none'
+		GROUP BY order_id) AS prep_table
+        GROUP BY pizza_no;
+```
+there is a relationship, the more the order, the longer it takes
 
+- What was the average distance travelled for each customer?
+```
+SELECT customer_orders.customer_id,ROUND(AVG(runner_orders.distance),2) AS average_distance
+FROM customer_orders
+LEFT JOIN runner_orders ON 
+customer_orders.order_id = runner_orders.order_id
+GROUP BY customer_orders.customer_id;
+```
+- What was the difference between the longest and shortest delivery times for all orders?
+```
+SELECT (MAX(duration) - MIN(duration))
+FROM runner_orders
+;
+```
+the longest delivery time is 40mins and shortest is 10mins
+
+- What was the average speed for each runner for each delivery ?
+
+- What is the successful delivery percentage for each runner?
+```
+SELECT runner_id, SUM(CASE 
+	WHEN pickup_time ='null' THEN 0
+    ELSE 1
+    END )/COUNT(order_id) AS successful_orders_percentge
+FROM runner_orders
+GROUP BY runner_id;
+```
 ### Pricing and Ratings 
 - If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
+```
+SELECT SUM(price) FROM
+ (SELECT *,
+ CASE 
+	WHEN pizza_id = 1 THEN '12'
+	WHEN pizza_id = 2 THEN '10'
+    ELSE null
+    END AS price
+FROM customer_orders) AS pizza_price;
+```
   
 - What if there was an additional $1 charge for any pizza extras?
 Add cheese is $1 extra
+```
+SELECT SUM(price) FROM
+(SELECT *,
+ CASE 
+	WHEN pizza_id = 1 AND extras <> '' THEN '13'
+	WHEN pizza_id = 2 AND extras <> '' THEN '11'
+    WHEN pizza_id = 1 THEN '12'
+    WHEN pizza_id = 2 THEN '10'
+    ELSE null
+    END AS price
+FROM customer_orders) AS price_with_extras;
+```
 
 - The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
+```
+CREATE TABLE ratings(customer_id INT,pizza_rating INT);
+
+
+INSERT INTO ratings(customer_id,pizza_rating)
+VALUES
+('101', '1'), 
+('102', '3'),
+('103', '1'),
+('104', '4'),
+('105', '3' )
+;
+SELECT *
+FROM ratings;
+```
+to find a rating, i had to check the order duration for each customer
   
 - Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
 customer_id
@@ -165,7 +262,74 @@ Delivery duration
 Average speed
 Total number of pizzas
 
+```
+-- delivery duration
+SELECT customer_id,MAX(duration)
+FROM customer_orders
+INNER JOIN runner_orders ON
+customer_orders.order_id = runner_orders.order_id
+WHERE duration IS NOT NULL
+GROUP BY customer_id;
+```
+```
+SELECT customer_orders.customer_id,runner_orders.order_id,runner_orders.runner_id,
+ratings.pizza_rating,customer_orders.order_time,runner_orders.pickup_time
+FROM customer_orders
+LEFT JOIN runner_orders ON
+customer_orders.order_id = runner_orders.order_id
+LEFT JOIN ratings ON
+customer_orders.customer_id = ratings.customer_id
+WHERE runner_orders.cancellation = 'none';
+```
+ timediff between pickup_time and order_time
+ ```
+SELECT customer_orders.customer_id,runner_orders.order_id,runner_orders.runner_id,
+ratings.pizza_rating,customer_orders.order_time,runner_orders.pickup_time,TIMEDIFF(pickup_time,order_time)
+FROM customer_orders
+LEFT JOIN runner_orders ON
+customer_orders.order_id = runner_orders.order_id
+LEFT JOIN ratings ON
+customer_orders.customer_id = ratings.customer_id
+WHERE runner_orders.cancellation = 'none';
+--  successful delivery duration
+SELECT customer_orders.customer_id,runner_orders.order_id,runner_orders.runner_id,
+ratings.pizza_rating,customer_orders.order_time,runner_orders.pickup_time,runner_orders.duration
+FROM customer_orders
+LEFT JOIN runner_orders ON
+customer_orders.order_id = runner_orders.order_id
+LEFT JOIN ratings ON
+customer_orders.customer_id = ratings.customer_id
+WHERE runner_orders.duration IS NOT NULL;
+```
+ average speed
+```
+SELECT  customer_orders.customer_id,
+ratings.pizza_rating,AVG(distance/duration) AS average_speed
+FROM customer_orders
+LEFT JOIN runner_orders ON
+customer_orders.order_id = runner_orders.order_id
+LEFT JOIN ratings ON
+customer_orders.customer_id = ratings.customer_id
+WHERE runner_orders.duration IS NOT NULL
+GROUP BY customer_id,pizza_rating;
+```
+
 - If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
+```
+SELECT order_id,customer_id,price,runner_fee,(price-runner_fee) AS profit,SUM(price-runner_fee) OVER() AS total_profit
+FROM 
+	(SELECT customer_orders.order_id,customer_orders.customer_id,(0.30*distance) AS runner_fee,
+		CASE 
+		WHEN pizza_id = 1 THEN '12'
+		WHEN pizza_id = 2 THEN '10'
+		ELSE null
+		END AS price
+	FROM customer_orders
+	INNER  JOIN runner_orders ON 
+	customer_orders.order_id = runner_orders.order_id
+	WHERE distance IS NOT NULL) AS price_table;
+ ```
+ therefore pizza runner made a total of $73.38 for all the orders after deducting the runner fee
 
 ### Ingredient optimization 
 - What was the commonly added extra ?
