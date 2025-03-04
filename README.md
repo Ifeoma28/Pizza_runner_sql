@@ -194,6 +194,13 @@ FROM runner_orders
 the longest delivery time is 40mins and shortest is 10mins
 
 - What was the average speed for each runner for each delivery ?
+```
+SELECT runner_id,order_id,AVG(distance/duration) AS average_speed_km_per_min
+FROM runner_orders
+WHERE cancellation = 'none'
+GROUP BY 1,2
+ORDER BY 1;
+```
 
 - What is the successful delivery percentage for each runner?
 ```
@@ -216,6 +223,7 @@ SELECT SUM(price) FROM
     END AS price
 FROM customer_orders) AS pizza_price;
 ```
+Therefore, Pizza Runner has made $160 so far.
   
 - What if there was an additional $1 charge for any pizza extras?
 Add cheese is $1 extra
@@ -231,6 +239,7 @@ SELECT SUM(price) FROM
     END AS price
 FROM customer_orders) AS price_with_extras;
 ```
+While a total of $164 if it charges $1 for extra
 
 - The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
 ```
