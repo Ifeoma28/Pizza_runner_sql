@@ -17,5 +17,5 @@ He was going to uberize it - and that's how Pizza Runner came about. By recruiti
 The dataset for this project is sourced from [Danny Ma](https://www.linkedin.com/in/datawithdanny)# Pizza_runner_sql
 
 ## Database diagram 
-Since Danny has a few years of experience as a Data Scientist,he has prepared for us a Database entity relationship diagram below 
-!Screenshot_20250304-111053_Chrome.jpg
+Since Danny has a few years of experience as a Data Scientist,he has prepared for us a Database entity relationship diagram below;
+
