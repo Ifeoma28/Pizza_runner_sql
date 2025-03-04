@@ -229,17 +229,19 @@ Therefore, Pizza Runner has made $160 so far.
 Add cheese is $1 extra
 ```
 SELECT SUM(price) FROM
-(SELECT *,
- CASE 
-	WHEN pizza_id = 1 AND extras <> '' THEN '13'
-	WHEN pizza_id = 2 AND extras <> '' THEN '11'
-    WHEN pizza_id = 1 THEN '12'
-    WHEN pizza_id = 2 THEN '10'
-    ELSE null
-    END AS price
-FROM customer_orders) AS price_with_extras;
+	(SELECT 
+	CASE 
+		WHEN pizza_id = 1 AND first_extra + second_extra = 2 THEN 12+2
+		WHEN pizza_id = 2 AND first_extra + second_extra  = 2 THEN 10+2
+		WHEN pizza_id = 1 AND first_extra + second_extra = 1 THEN 12+1
+		WHEN pizza_id = 2 AND first_extra + second_extra = 1 THEN 10+1
+		WHEN pizza_id = 1 AND first_extra + second_extra = 0 THEN 12
+		WHEN pizza_id = 2 AND first_extra + second_extra = 0 THEN 10
+		END AS price
+	FROM (SELECT *,length(substr(extras,1,1)) AS first_extra, length(substr(extras,3,1)) AS second_extra 
+				FROM customer_orders) AS extras_price) AS extras_price_table;
 ```
-While a total of $164 if it charges $1 for extra
+So it has a total of $166 if it charges $1 for any extra
 
 - The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
 ```
@@ -361,3 +363,21 @@ The common exclusion is Cheese
 - What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 
 ## Findings 
+- 14 pizzas were ordered and two of the customer orders were canceled.
+- The ratio of Meatlovers to Vegetable pizza ordered is 3:1
+- The maximum number of pizzas delivered in a single order is 3
+- About six orders had at least one change (extras or exclusions)
+- About four orders had no changes
+- customers ordered the least number of pizza at the 11th and 19th hour of the day
+- Fridays and Mondays were the busiest days because they had the highest number of sales
+- Only one runner signed up for more than one week period
+- Runner 2 took the longest time to pickup its orders from the HQ due to one of the customers making multiple orders
+- We noticed the positive correlation between the number of pizza and how long it takes to prepare by checking the average max_prep_time
+- Customer 105 had the longest distance from the HQ to his delivery location which is a good reason for having the least number of orders
+- Runner 1 has the most successful delivery percentage with the lowest duration of 10mins despite delivering the highest number of successful orders
+- The most commonly added extra is Bacon
+- The most commonly exclusion is Cheese (it seems a lot of people want to cut down fat)
+- 
+- 
+- 
+- 
